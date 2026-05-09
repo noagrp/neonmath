@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NEON_MATH // STABLE_TEXT</title>
+    <style>
+        :root { --neon-blue: #0ff; --neon-red: #f44; --neon-green: #4f4; --bg: #000; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body { 
+            background: #111; color: #fff; font-family: 'Courier New', monospace; 
+            margin: 0; padding: 0; width: 100vw; height: 100vh;
+            overflow: hidden; touch-action: none; display: flex; justify-content: center;
+        }
+
+        #master-wrapper {
+            width: 100%; max-width: 450px; height: 100vh; background: var(--bg);
+            display: flex; flex-direction: column; position: relative;
+            border-left: 1px solid #222; border-right: 1px solid #222;
+        }
+
+        #top-interface {
+            height: 15vh; width: 100%; background: #0a0a0a; 
+            border-bottom: 2px solid #222; display: none;
+            flex-direction: column; align-items: center; justify-content: center;
+            padding: 5px; z-index: 50;
+        }
+        #stats-row { width: 90%; display: flex; justify-content: space-between; font-size: 0.8rem; color: #666; }
+        #input-box { 
+            font-size: 2.5rem; font-weight: bold; color: #fff; 
+            text-shadow: 0 0 15px var(--neon-blue); letter-spacing: 4px;
+            margin-top: 5px; height: 45px; text-align: center;
+        }
+
+        #game-area {
+            height: 50vh; width: 100%; position: relative;
+            background: #000; border-bottom: 1px solid #111;
+        }
+        canvas { display: block; width: 100%; height: 100%; }
+
+        #kb-container { 
+            height: 35vh; width: 100%; background: #050505;
+            display: none; grid-template-columns: repeat(3, 1fr); gap: 6px;
+            padding: 10px; touch-action: manipulation;
+        }
+        .key { 
+            background: #151515; border: 1px solid #333; color: #fff; 
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; font-weight: bold; border-radius: 4px;
+            cursor: pointer; user-select: none;
+        }
+        .key:active { background: #fff; color: #000; }
+        .clr { color: var(--neon-red); border-color: var(--neon-red); }
+        .exe { color: var(--neon-green); border-color: var(--neon-green); }
+
+        .screen { 
+            position: absolute; inset: 0; background: var(--bg);
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            z-index: 100; text-align: center;
+        }
+        .menu-btn { 
+            width: 280px; padding: 20px; margin: 10px; border: 2px solid var(--neon-blue); 
+            background: transparent; color: var(--neon-blue); font-weight: bold; cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="master-wrapper">
+        <div id="menu-screen" class="screen">
+            <h1 style="letter-spacing: 5px; color: var(--neon-blue);">NEON_MATH</h1>
+            <button class="menu-btn" onclick="startGame('easy')">01_EASY_MODE</button>
+            <button class="menu-btn" onclick="startGame('hard')">02_HARD_MODE</button>
+        </div>
+
+        <div id="fail-screen" class="screen" style="display:none;">
+            <h2 style="color:var(--neon-red)">TERMINAL_BREACH</h2>
+            <button class="menu-btn" style="border-color:#f00; color:#f00;" onclick="location.reload()">RELOAD_OS</button>
+        </div>
+
+        <header id="top-interface">
+            <div id="stats-row"><span id="lvl-txt">NODE: 1</span><span id="hp-txt">SHIELD: 100%</span></div>
+            <div id="input-box">_</div>
+        </header>
+        
+        <main id="game-area">
+            <canvas id="gameCanvas"></canvas>
+        </main>
+
+        <footer id="kb-container">
+            <div class="key" onclick="key('1')">1</div><div class="key" onclick="key('2')">2</div><div class="key" onclick="key('3')">3</div>
+            <div class="key" onclick="key('4')">4</div><div class="key" onclick="key('5')">5</div><div class="key" onclick="key('6')">6</div>
+            <div class="key" onclick="key('7')">7</div><div class="key" onclick="key('8')">8</div><div class="key" onclick="key('9')">9</div>
+            <div class="key clr" onclick="key('C')">CLR</div><div class="key" onclick="key('0')">0</div><div class="key exe" onclick="key('E')">EXE</div>
+        </footer>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let mode = 'easy', score = 0, hp = 5, level = 1, isRunning = false;
+        let enemies = [], lastSpawn = 0, currentInput = "";
+        const NEONS = ['#0ff', '#f0f', '#0f0', '#ff0', '#fff', '#f44'];
+
+        function startGame(m) {
+            mode = m; score = 0; hp = 5; level = 1; enemies = []; 
+            isRunning = true;
+            document.getElementById('menu-screen').style.display = 'none';
+            document.getElementById('top-interface').style.display = 'flex';
+            document.getElementById('kb-container').style.display = 'grid';
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            updateUI();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function createEnemy() {
+            let text, ans;
+            const rand = Math.random();
+            if (mode === 'easy') {
+                const eType = Math.floor(Math.random() * 4);
+                if (eType === 0) { let n1 = Math.floor(Math.random() * 20); let n2 = Math.floor(Math.random() * 20); ans = n1 + n2; text = `${n1}+${n2}`; }
+                else if (eType === 1) { let n1 = Math.floor(Math.random() * 30); let n2 = Math.floor(Math.random() * 15); ans = n1 - n2; text = `${n1}-${n2}`; }
+                else if (eType === 2) { let n1 = Math.floor(Math.random() * 10); let n2 = Math.floor(Math.random() * 10); ans = n1 * n2; text = `${n1}×${n2}`; }
+                else { ans = Math.floor(Math.random() * 9) + 1; let n2 = Math.floor(Math.random() * 8) + 2; let n1 = ans * n2; text = `${n1}÷${n2}`; }
+            } else {
+                const qType = Math.floor(Math.random() * 6);
+                if (qType === 0) { ans = Math.floor(Math.random() * 20); let a = Math.floor(Math.random() * 20); text = `X + ${a} = ${ans+a}`; }
+                else if (qType === 1) { ans = Math.floor(Math.random() * 12) + 1; text = `√${ans*ans}`; }
+                else if (qType === 2) { let m = Math.floor(Math.random() * 10) + 2; let a = Math.floor(Math.random() * 5) + 2; ans = m * a; text = `FORCE(M:${m},A:${a})`; }
+                else if (qType === 3) { let i = Math.floor(Math.random() * 10) + 2; let r = Math.floor(Math.random() * 10) + 1; ans = i * r; text = `VOLTS(I:${i},R:${r})`; }
+                else if (qType === 4) { let v = Math.floor(Math.random() * 15) + 5; let t = Math.floor(Math.random() * 5) + 2; ans = v * t; text = `DIST(V:${v},T:${t})`; }
+                else { let m = Math.floor(Math.random() * 90) + 5; ans = m * 10; text = `WEIGHT(M:${m},G:10)`; }
+            }
+            
+            let baseSpeed = (mode === 'easy') ? 1.2 : 0.7;
+            
+            // SPAWN RANGE: Limits horizontal position between 80px and (Width - 80px)
+            enemies.push({ 
+                x: Math.random() * (canvas.width - 160) + 80, 
+                y: -50, 
+                text, 
+                ans, 
+                color: NEONS[Math.floor(Math.random() * NEONS.length)], 
+                speed: baseSpeed + (level * 0.2) 
+            });
+        }
+
+        function gameLoop(time) {
+            if (!isRunning) return;
+            if (time - lastSpawn > Math.max(800, 3000 - (level * 300))) { createEnemy(); lastSpawn = time; }
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            enemies.forEach((en, i) => {
+                en.y += en.speed;
+                
+                // AUTO-SCALING FONT LOGIC
+                // If text length > 12 characters, shrink font to 16px, otherwise keep 22px
+                let fontSize = en.text.length > 12 ? "16px" : "22px";
+                
+                ctx.shadowBlur = 10; ctx.shadowColor = en.color;
+                ctx.fillStyle = en.color; 
+                ctx.font = `bold ${fontSize} Courier New`; 
+                ctx.textAlign = 'center';
+                ctx.fillText(en.text, en.x, en.y);
+                ctx.shadowBlur = 0;
+                
+                if (en.y > canvas.height) { enemies.splice(i, 1); hp--; updateUI(); if (hp <= 0) location.reload(); }
+            });
+            requestAnimationFrame(gameLoop);
+        }
+
+        function key(val) {
+            if (val === 'C') currentInput = "";
+            else if (val === 'E') {
+                let match = enemies.findIndex(en => en.ans == parseInt(currentInput));
+                if (match !== -1) { 
+                    enemies.splice(match, 1); 
+                    score += 100; 
+                    if (score % 500 === 0) level++; 
+                }
+                currentInput = "";
+            } else { if(currentInput.length < 5) currentInput += val; }
+            document.getElementById('input-box').innerText = currentInput || "_";
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById('hp-txt').innerText = `SHIELD: ${hp * 20}%`;
+            document.getElementById('lvl-txt').innerText = `NODE: ${level}`;
+            document.getElementById('hp-txt').style.color = hp < 2 ? '#f44' : '#fff';
+        }
+
+        window.addEventListener('keydown', e => {
+            if (!isRunning) return;
+            if (e.key >= '0' && e.key <= '9') key(e.key);
+            if (e.key === 'Enter') key('E');
+            if (e.key === 'Backspace') key('C');
+        });
+    </script>
+</body>
+</html>
