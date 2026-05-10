@@ -3,56 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NEON_MATH // FULL_RESTORE</title>
+    <title>NEON_MATH // MOBILE_FIX</title>
     <style>
         :root { --neon-blue: #0ff; --neon-red: #f44; --neon-green: #4f4; --bg: #000; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
         body { 
             background: #111; color: #fff; font-family: 'Courier New', monospace; 
-            margin: 0; padding: 0; width: 100vw; height: 100vh;
+            margin: 0; padding: 0; 
+            /* FIXED: Use dvh to ensure everything fits on mobile screens */
+            width: 100vw; height: 100dvh; 
             overflow: hidden; touch-action: none; display: flex; justify-content: center;
         }
 
         #master-wrapper {
-            width: 100%; max-width: 450px; height: 100vh; background: var(--bg);
+            width: 100%; max-width: 450px; height: 100%; background: var(--bg);
             display: flex; flex-direction: column; position: relative;
             border-left: 1px solid #222; border-right: 1px solid #222;
         }
 
+        /* HEADER (Slightly smaller at 12%) */
         #top-interface {
-            height: 15vh; width: 100%; background: #0a0a0a; 
+            height: 12%; width: 100%; background: #0a0a0a; 
             border-bottom: 2px solid #222; display: none;
             flex-direction: column; align-items: center; justify-content: center;
             padding: 5px; z-index: 50;
         }
         #stats-row { width: 90%; display: flex; justify-content: space-between; font-size: 0.8rem; color: #666; }
         #input-box { 
-            font-size: 2.5rem; font-weight: bold; color: #fff; 
+            font-size: 2.2rem; font-weight: bold; color: #fff; 
             text-shadow: 0 0 15px var(--neon-blue); letter-spacing: 4px;
-            margin-top: 5px; height: 45px; text-align: center;
+            height: 40px; text-align: center;
         }
 
+        /* GAME AREA (48%) */
         #game-area {
-            height: 50vh; width: 100%; position: relative;
+            height: 48%; width: 100%; position: relative;
             background: #000; border-bottom: 1px solid #111;
         }
         canvas { display: block; width: 100%; height: 100%; }
 
+        /* KEYBOARD (Locked to 40% to ensure Execute is visible) */
         #kb-container { 
-            height: 35vh; width: 100%; background: #050505;
+            height: 40%; width: 100%; background: #050505;
             display: none; grid-template-columns: repeat(3, 1fr); gap: 6px;
-            padding: 10px; touch-action: manipulation;
+            padding: 8px; touch-action: manipulation;
         }
         .key { 
             background: #151515; border: 1px solid #333; color: #fff; 
             display: flex; align-items: center; justify-content: center;
-            font-size: 1.5rem; font-weight: bold; border-radius: 4px;
+            font-size: 1.4rem; font-weight: bold; border-radius: 4px;
             cursor: pointer; user-select: none;
         }
         .key:active { background: #fff; color: #000; }
         .clr { color: var(--neon-red); border-color: var(--neon-red); }
-        .exe { color: var(--neon-green); border-color: var(--neon-green); grid-column: span 3; font-size: 1.1rem; }
+        .exe { color: var(--neon-green); border-color: var(--neon-green); grid-column: span 3; font-size: 1rem; }
         .minus { color: var(--neon-blue); border-color: var(--neon-blue); }
 
         .screen { 
@@ -61,7 +66,7 @@
             z-index: 100; text-align: center;
         }
         .menu-btn { 
-            width: 280px; padding: 20px; margin: 10px; border: 2px solid var(--neon-blue); 
+            width: 260px; padding: 18px; margin: 10px; border: 2px solid var(--neon-blue); 
             background: transparent; color: var(--neon-blue); font-weight: bold; cursor: pointer;
         }
     </style>
@@ -106,8 +111,11 @@
             document.getElementById('menu-screen').style.display = 'none';
             document.getElementById('top-interface').style.display = 'flex';
             document.getElementById('kb-container').style.display = 'grid';
+            
+            // Recalculate canvas size based on new proportions
             canvas.width = canvas.offsetWidth;
             canvas.height = canvas.offsetHeight;
+            
             updateUI();
             requestAnimationFrame(gameLoop);
         }
@@ -130,7 +138,6 @@
                     let n1 = ans * n2; text = `${n1}/${n2}`;
                 }
             } else {
-                // HARD MODE: REINSTATED ORIGINAL LOGIC
                 const qType = Math.floor(Math.random() * 5);
                 if (qType === 0) { ans = Math.floor(Math.random() * 20); let a = Math.floor(Math.random() * 20); text = `X + ${a} = ${ans+a}`; }
                 else if (qType === 1) { ans = Math.floor(Math.random() * 12) + 1; text = `√${ans*ans}`; }
