@@ -164,6 +164,16 @@
 
         /* Mobile specific viewport scaling safeguards */
         @media (max-width: 600px) {
+            body {
+                justify-content: flex-start; /* Pulls layout wrapper up to the top of the mobile screen */
+                padding-top: 5px;
+            }
+            #gameWrapper {
+                gap: 2px; /* Tightens space between layout blocks on phone screen */
+            }
+            #questionHeaderZone {
+                height: 42px; /* Pulls game board up by reducing text boundary height */
+            }
             h1 { font-size: 2.2rem; }
             p { font-size: 0.95rem; }
             #questionTextDisplay { font-size: 1.8rem; }
